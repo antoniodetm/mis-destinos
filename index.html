@@ -28,10 +28,11 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center;
         }
         
-        .thumb { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 12px; background: #eee; flex-shrink: 0; cursor: pointer; border: 2px solid #fff; }
+        .thumb { width: 65px; height: 65px; border-radius: 15px; object-fit: cover; margin-right: 12px; background: #eee; flex-shrink: 0; cursor: pointer; border: 2px solid #fff; }
         .card-info { flex-grow: 1; cursor: pointer; }
         .card-title { font-weight: bold; font-size: 1.1rem; color: #333; display: block; }
-        .card-subtitle { font-size: 0.8rem; color: #95a5a6; }
+        .card-meta { font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-top: 2px; }
+        .card-subtitle { font-size: 0.8rem; color: #95a5a6; margin-top: 2px; }
 
         .card-controls { display: flex; flex-direction: column; gap: 4px; margin-left: 10px; border-left: 1px solid #eee; padding-left: 10px; }
         .order-btn { background: none; border: none; font-size: 14px; color: #ccc; cursor: pointer; }
@@ -44,13 +45,16 @@
         .btn-save { background: var(--primary); color: white; }
         
         .profile-pic-container { text-align: center; margin-bottom: 20px; }
-        #preview-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; background: #ddd; }
+        #preview-img { width: 120px; height: 120px; border-radius: 20px; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; background: #ddd; }
         
-        label { display: block; margin-top: 18px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: #7f8c8d; }
-        input, textarea { width: 100%; margin-top: 8px; padding: 14px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; font-size: 16px; }
+        .row-inputs { display: flex; gap: 10px; }
+        .row-inputs > div { flex: 1; }
+
+        label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: #7f8c8d; }
+        input, textarea { width: 100%; margin-top: 5px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
         
         .url-group { display: flex; gap: 5px; margin-top: 8px; align-items: center; }
-        .btn-action { width: 40px; height: 44px; margin-top: 8px; border: none; border-radius: 10px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-action { width: 40px; height: 40px; margin-top: 5px; border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .btn-remove { background: var(--danger); }
         .btn-add-inline { background: var(--success); }
         .btn-go { background: var(--primary); }
@@ -82,68 +86,40 @@
         <img id="preview-img" src="" onclick="document.getElementById('file-input').click()">
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(this)">
     </div>
+    
     <label>Nombre del Destino</label>
-    <input type="text" id="edit-title">
+    <input type="text" id="edit-title" placeholder="Ej: Montserrat">
+
+    <div class="row-inputs">
+        <div>
+            <label>Provincia</label>
+            <input type="text" id="edit-provincia" placeholder="Ej: Barcelona">
+        </div>
+        <div>
+            <label>Kilómetros</label>
+            <input type="number" id="edit-km" placeholder="Ej: 45">
+        </div>
+    </div>
+    
     <label>Enlaces Web</label>
     <div id="urls-container"></div>
+    
     <label>Notas</label>
     <textarea id="edit-notes" rows="4"></textarea>
+    
     <input type="hidden" id="edit-index">
 </div>
 
 <script>
-    // --- EDITA ESTOS DATOS ---
-    const GITHUB_USER = "antoniodetm"; 
-    const GITHUB_REPO = "mis-destinos";
-    // -------------------------
+    // --- CONFIGURACIÓN FIJA ---
+    const GITHUB_USER = "TU_USUARIO"; 
+    const GITHUB_REPO = "TU_REPO";
+    const FILENAME = "mis-destinos.json";
 
     let trips = JSON.parse(localStorage.getItem('myTrips')) || [];
     let currentBase64 = "";
     const placeholderImg = "https://via.placeholder.com/150?text=Foto";
 
-    // --- 1. SYNC RAW ---
-    async function syncFromGitHub() {
-        if (GITHUB_USER === "TU_USUARIO_AQUI") return alert("Por favor, edita el código HTML y pon tu usuario de GitHub.");
-        
-        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/mis-destinos.json`;
-
-        try {
-            const response = await fetch(rawUrl + '?nocache=' + new Date().getTime());
-            if (!response.ok) throw new Error("No se halló el archivo mis-destinos.json en GitHub.");
-            const data = await response.json();
-            
-            if (confirm("¿Sobrescribir datos locales con los de GitHub?")) {
-                trips = data;
-                saveAndRefresh();
-                alert("✅ Sincronizado correctamente.");
-            }
-        } catch (err) { alert("Error de Sync: " + err.message); }
-    }
-
-    // --- 2. GUARDAR JSON ---
-    function exportJSON() {
-        const dataStr = JSON.stringify(trips, null, 2);
-        const blob = new Blob([dataStr], {type: "application/json"});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'mis-destinos.json';
-        a.click();
-    }
-
-    // --- 3. IMPORTAR MANUAL ---
-    function importJSON(input) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                trips = JSON.parse(e.target.result);
-                saveAndRefresh();
-                alert("Importado correctamente.");
-            } catch(err) { alert("Archivo no válido."); }
-        };
-        reader.readAsText(input.files[0]);
-    }
-
-    // --- LÓGICA DE FUNCIONAMIENTO ---
     function renderTrips() {
         const container = document.getElementById('trips-container');
         container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray; margin-top:50px;">Lista vacía.</p>' : '';
@@ -153,7 +129,8 @@
                     <img src="${trip.img || placeholderImg}" class="thumb" onclick="openDetails(${index})">
                     <div class="card-info" onclick="openDetails(${index})">
                         <span class="card-title">${trip.title}</span>
-                        <div class="card-subtitle">${trip.urls.length} enlaces</div>
+                        <div class="card-meta">📍 ${trip.provincia || '---'} • 🚗 ${trip.km || '0'} km</div>
+                        <div class="card-subtitle">${trip.urls ? trip.urls.length : 0} enlaces cargados</div>
                     </div>
                     <div class="card-controls">
                         <button class="order-btn" onclick="moveTrip(${index}, -1)">▲</button>
@@ -162,6 +139,40 @@
                     </div>
                 </div>`;
         });
+    }
+
+    async function syncFromGitHub() {
+        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${FILENAME}`;
+        try {
+            const response = await fetch(rawUrl + '?nocache=' + new Date().getTime());
+            if (!response.ok) throw new Error("No se halló el archivo en GitHub.");
+            const data = await response.json();
+            if (confirm("¿Sincronizar desde GitHub?")) {
+                trips = data;
+                saveAndRefresh();
+                alert("✅ Sincronizado.");
+            }
+        } catch (err) { alert("Error: " + err.message); }
+    }
+
+    function exportJSON() {
+        const blob = new Blob([JSON.stringify(trips, null, 2)], {type: "application/json"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = FILENAME;
+        a.click();
+    }
+
+    function importJSON(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                trips = JSON.parse(e.target.result);
+                saveAndRefresh();
+                alert("Importado.");
+            } catch(err) { alert("Error en el archivo."); }
+        };
+        reader.readAsText(input.files[0]);
     }
 
     function addUrlField(value = '') {
@@ -188,7 +199,9 @@
         document.getElementById('urls-container').innerHTML = '';
         if (index !== null) {
             const trip = trips[index];
-            document.getElementById('edit-title').value = trip.title;
+            document.getElementById('edit-title').value = trip.title || "";
+            document.getElementById('edit-provincia').value = trip.provincia || "";
+            document.getElementById('edit-km').value = trip.km || "";
             document.getElementById('edit-notes').value = trip.notes || "";
             document.getElementById('edit-index').value = index;
             document.getElementById('preview-img').src = trip.img || placeholderImg;
@@ -197,6 +210,8 @@
             else addUrlField();
         } else {
             document.getElementById('edit-title').value = "";
+            document.getElementById('edit-provincia').value = "";
+            document.getElementById('edit-km').value = "";
             document.getElementById('edit-notes').value = "";
             document.getElementById('edit-index').value = "new";
             document.getElementById('preview-img').src = placeholderImg;
@@ -210,9 +225,19 @@
         if (!title) return;
         const index = document.getElementById('edit-index').value;
         const urls = Array.from(document.querySelectorAll('.trip-url')).map(i => i.value).filter(v => v);
-        const tripData = { title, img: currentBase64, urls, notes: document.getElementById('edit-notes').value };
+        
+        const tripData = { 
+            title, 
+            provincia: document.getElementById('edit-provincia').value,
+            km: document.getElementById('edit-km').value,
+            img: currentBase64, 
+            urls, 
+            notes: document.getElementById('edit-notes').value 
+        };
+
         if (index === "new") trips.push(tripData);
         else trips[index] = tripData;
+        
         saveAndRefresh();
         showList();
     }
