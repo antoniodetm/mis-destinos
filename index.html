@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mis Destinos Pro</title>
+    <style>
+        :root { --primary: #3498db; --bg: #f4f7f6; --text: #2c3e50; --danger: #e74c3c; --success: #2ecc71; --dark: #34495e; }
+        body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); margin: 0; color: var(--text); }
+        
+        .screen { display: none; padding: 20px; box-sizing: border-box; min-height: 100vh; }
+        .active { display: block; }
+
+        /* Barra Superior */
+        .top-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+        .btn-top { 
+            flex: 1; padding: 12px 2px; border-radius: 12px; border: none; 
+            background: white; color: var(--dark); font-size: 11px; font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 4px;
+        }
+        .btn-top:active { background: #f0f0f0; }
+
+        /* Lista Principal */
+        h1 { text-align: center; font-size: 1.5rem; margin: 5px 0 20px 0; font-weight: 800; }
+        .trip-card {
+            background: white; padding: 12px; margin-bottom: 15px; border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center;
+        }
+        
+        .thumb { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 12px; background: #eee; flex-shrink: 0; cursor: pointer; border: 2px solid #fff; }
+        .card-info { flex-grow: 1; cursor: pointer; }
+        .card-title { font-weight: bold; font-size: 1.1rem; color: #333; display: block; }
+        .card-subtitle { font-size: 0.8rem; color: #95a5a6; }
+
+        .card-controls { display: flex; flex-direction: column; gap: 4px; margin-left: 10px; border-left: 1px solid #eee; padding-left: 10px; }
+        .order-btn { background: none; border: none; font-size: 14px; color: #ccc; cursor: pointer; }
+        .delete-quick { color: #ffbcbc; border: none; background: none; font-size: 14px; cursor: pointer; }
+
+        /* Pantalla Detalles */
+        .header-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .btn { padding: 10px 20px; border-radius: 12px; border: none; font-weight: bold; }
+        .btn-back { background: #eee; color: #666; }
+        .btn-save { background: var(--primary); color: white; }
+        
+        .profile-pic-container { text-align: center; margin-bottom: 20px; }
+        #preview-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; background: #ddd; }
+        
+        label { display: block; margin-top: 18px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: #7f8c8d; }
+        input, textarea { width: 100%; margin-top: 8px; padding: 14px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; font-size: 16px; }
+        
+        .url-group { display: flex; gap: 5px; margin-top: 8px; align-items: center; }
+        .btn-action { width: 40px; height: 44px; margin-top: 8px; border: none; border-radius: 10px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-remove { background: var(--danger); }
+        .btn-add-inline { background: var(--success); }
+        .btn-go { background: var(--primary); }
+
+        .add-btn-main { position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 35px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10; }
+    </style>
+</head>
+<body>
+
+<div id="list-screen" class="screen active">
+    <div class="top-bar">
+        <button class="btn-top" onclick="syncFromGitHub()">🔄 Sync Raw</button>
+        <button class="btn-top" onclick="exportJSON()">📤 Guardar JSON</button>
+        <button class="btn-top" onclick="document.getElementById('import-input').click()">📥 Importar</button>
+        <input type="file" id="import-input" style="display:none" accept=".json" onchange="importJSON(this)">
+    </div>
+
+    <h1>🌍 Mis Destinos</h1>
+    <div id="trips-container"></div>
+    <button class="add-btn-main" onclick="openDetails(null)">+</button>
+</div>
+
+<div id="detail-screen" class="screen">
+    <div class="header-detail">
+        <button class="btn btn-back" onclick="showList()">Volver</button>
+        <button class="btn btn-save" onclick="saveTrip()">Guardar</button>
+    </div>
+    <div class="profile-pic-container">
+        <img id="preview-img" src="" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(this)">
+    </div>
+    <label>Nombre del Destino</label>
+    <input type="text" id="edit-title">
+    <label>Enlaces Web</label>
+    <div id="urls-container"></div>
+    <label>Notas</label>
+    <textarea id="edit-notes" rows="4"></textarea>
+    <input type="hidden" id="edit-index">
+</div>
+
+<script>
+    // --- EDITA ESTOS DATOS ---
+    const GITHUB_USER = "TU_USUARIO_AQUI"; 
+    const GITHUB_REPO = "TU_REPOSITORIO_AQUI";
+    // -------------------------
+
+    let trips = JSON.parse(localStorage.getItem('myTrips')) || [];
+    let currentBase64 = "";
+    const placeholderImg = "https://via.placeholder.com/150?text=Foto";
+
+    // --- 1. SYNC RAW ---
+    async function syncFromGitHub() {
+        if (GITHUB_USER === "TU_USUARIO_AQUI") return alert("Por favor, edita el código HTML y pon tu usuario de GitHub.");
+        
+        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/mis-destinos.json`;
+
+        try {
+            const response = await fetch(rawUrl + '?nocache=' + new Date().getTime());
+            if (!response.ok) throw new Error("No se halló el archivo mis-destinos.json en GitHub.");
+            const data = await response.json();
+            
+            if (confirm("¿Sobrescribir datos locales con los de GitHub?")) {
+                trips = data;
+                saveAndRefresh();
+                alert("✅ Sincronizado correctamente.");
+            }
+        } catch (err) { alert("Error de Sync: " + err.message); }
+    }
+
+    // --- 2. GUARDAR JSON ---
+    function exportJSON() {
+        const dataStr = JSON.stringify(trips, null, 2);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'mis-destinos.json';
+        a.click();
+    }
+
+    // --- 3. IMPORTAR MANUAL ---
+    function importJSON(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                trips = JSON.parse(e.target.result);
+                saveAndRefresh();
+                alert("Importado correctamente.");
+            } catch(err) { alert("Archivo no válido."); }
+        };
+        reader.readAsText(input.files[0]);
+    }
+
+    // --- LÓGICA DE FUNCIONAMIENTO ---
+    function renderTrips() {
+        const container = document.getElementById('trips-container');
+        container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray; margin-top:50px;">Lista vacía.</p>' : '';
+        trips.forEach((trip, index) => {
+            container.innerHTML += `
+                <div class="trip-card">
+                    <img src="${trip.img || placeholderImg}" class="thumb" onclick="openDetails(${index})">
+                    <div class="card-info" onclick="openDetails(${index})">
+                        <span class="card-title">${trip.title}</span>
+                        <div class="card-subtitle">${trip.urls.length} enlaces</div>
+                    </div>
+                    <div class="card-controls">
+                        <button class="order-btn" onclick="moveTrip(${index}, -1)">▲</button>
+                        <button class="delete-quick" onclick="deleteTrip(${index})">🗑️</button>
+                        <button class="order-btn" onclick="moveTrip(${index}, 1)">▼</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    function addUrlField(value = '') {
+        const container = document.getElementById('urls-container');
+        const div = document.createElement('div');
+        div.className = 'url-group';
+        div.innerHTML = `
+            <input type="url" class="trip-url" placeholder="https://..." value="${value}">
+            <button class="btn-action btn-go" onclick="goToUrl(this)">➜</button>
+            <button class="btn-action btn-remove" onclick="this.parentElement.remove()">✕</button>
+            <button class="btn-action btn-add-inline" onclick="addUrlField()">+</button>
+        `;
+        container.appendChild(div);
+    }
+
+    function goToUrl(btn) {
+        const url = btn.parentElement.querySelector('input').value;
+        if (url) window.open(url.startsWith('http') ? url : 'https://' + url, '_blank');
+    }
+
+    function openDetails(index) {
+        document.getElementById('list-screen').classList.remove('active');
+        document.getElementById('detail-screen').classList.add('active');
+        document.getElementById('urls-container').innerHTML = '';
+        if (index !== null) {
+            const trip = trips[index];
+            document.getElementById('edit-title').value = trip.title;
+            document.getElementById('edit-notes').value = trip.notes || "";
+            document.getElementById('edit-index').value = index;
+            document.getElementById('preview-img').src = trip.img || placeholderImg;
+            currentBase64 = trip.img || "";
+            if (trip.urls && trip.urls.length > 0) trip.urls.forEach(url => addUrlField(url));
+            else addUrlField();
+        } else {
+            document.getElementById('edit-title').value = "";
+            document.getElementById('edit-notes').value = "";
+            document.getElementById('edit-index').value = "new";
+            document.getElementById('preview-img').src = placeholderImg;
+            currentBase64 = "";
+            addUrlField();
+        }
+    }
+
+    function saveTrip() {
+        const title = document.getElementById('edit-title').value;
+        if (!title) return;
+        const index = document.getElementById('edit-index').value;
+        const urls = Array.from(document.querySelectorAll('.trip-url')).map(i => i.value).filter(v => v);
+        const tripData = { title, img: currentBase64, urls, notes: document.getElementById('edit-notes').value };
+        if (index === "new") trips.push(tripData);
+        else trips[index] = tripData;
+        saveAndRefresh();
+        showList();
+    }
+
+    function deleteTrip(index) {
+        if (confirm("¿Borrar?")) { trips.splice(index, 1); saveAndRefresh(); }
+    }
+
+    function moveTrip(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < trips.length) {
+            [trips[index], trips[newIndex]] = [trips[newIndex], trips[index]];
+            saveAndRefresh();
+        }
+    }
+
+    function handleFile(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentBase64 = e.target.result;
+                document.getElementById('preview-img').src = currentBase64;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function saveAndRefresh() {
+        localStorage.setItem('myTrips', JSON.stringify(trips));
+        renderTrips();
+    }
+
+    function showList() {
+        document.getElementById('detail-screen').classList.remove('active');
+        document.getElementById('list-screen').classList.add('active');
+    }
+
+    renderTrips();
+</script>
+
+</body>
+</html>
