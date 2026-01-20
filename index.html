@@ -169,7 +169,7 @@
             try {
                 trips = JSON.parse(e.target.result);
                 saveAndRefresh();
-                alert("Importado.");
+                alert("Importado correctamente.");
             } catch(err) { alert("Error en el archivo."); }
         };
         reader.readAsText(input.files[0]);
