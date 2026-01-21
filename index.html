@@ -6,7 +6,7 @@
     <title>Mis Destinos Pro</title>
     <style>
         :root { --primary: #3498db; --bg: #f4f7f6; --text: #2c3e50; --danger: #e74c3c; --success: #2ecc71; --dark: #34495e; }
-        body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); margin: 0; color: var(--text); }
+        body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); margin: 0; color: var(--text); -webkit-font-smoothing: antialiased; }
         
         .screen { display: none; padding: 20px; box-sizing: border-box; min-height: 100vh; }
         .active { display: block; }
@@ -20,13 +20,18 @@
             display: flex; align-items: center; justify-content: center; gap: 4px;
         }
 
-        /* Mapa MyMaps */
+        /* Mapa MyMaps - Optimizado para iPhone 12 */
         .map-container {
             width: 100%; height: 350px; border-radius: 20px; overflow: hidden;
             margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
             background: #e5e3df; border: 2px solid white;
+            position: relative;
+            -webkit-transform: translateZ(0); /* Forzar renderizado en iOS */
         }
-        .map-container iframe { width: 100%; height: 100%; border: none; }
+        .map-container iframe { 
+            width: 100%; height: 100%; border: none; 
+            position: absolute; top: 0; left: 0;
+        }
 
         /* Lista Principal */
         h1 { text-align: center; font-size: 1.5rem; margin: 10px 0 20px 0; font-weight: 800; }
@@ -44,7 +49,7 @@
         .order-btn { background: none; border: none; font-size: 14px; color: #ccc; cursor: pointer; }
         .delete-quick { color: #ffbcbc; border: none; background: none; font-size: 14px; cursor: pointer; }
 
-        /* Pantalla Detalles - FOTO GRANDE */
+        /* Pantalla Detalles */
         .header-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .btn { padding: 10px 20px; border-radius: 12px; border: none; font-weight: bold; }
         .btn-back { background: #eee; color: #666; }
@@ -77,7 +82,11 @@
     </div>
 
     <div class="map-container">
-        <iframe src="https://www.google.com/maps/d/u/0/embed?mid=1FATKt49yvCmEUAieYpCZsyYnyydIr9U&ehbc=2E312F"></iframe>
+        <iframe 
+            src="https://www.google.com/maps/d/u/0/embed?mid=1FATKt49yvCmEUAieYpCZsyYnyydIr9U&ehbc=2E312F" 
+            allowfullscreen 
+            loading="lazy">
+        </iframe>
     </div>
 
     <h1>🌍 Mis Destinos</h1>
@@ -139,7 +148,6 @@
         });
     }
 
-    // GESTIÓN DE ENLACES (MEJORADA)
     function addUrlField(value = '') {
         const container = document.getElementById('urls-container');
         const div = document.createElement('div');
@@ -161,7 +169,7 @@
     function openDetails(index) {
         document.getElementById('list-screen').classList.remove('active');
         document.getElementById('detail-screen').classList.add('active');
-        document.getElementById('urls-container').innerHTML = ''; // Limpiar siempre
+        document.getElementById('urls-container').innerHTML = '';
         
         if (index !== null) {
             const t = trips[index];
@@ -172,13 +180,7 @@
             document.getElementById('preview-img').src = t.img || placeholderImg;
             currentBase64 = t.img || "";
             document.getElementById('edit-index').value = index;
-            
-            // Si el destino tiene enlaces, ponlos. Si no, pon uno vacío.
-            if (t.urls && t.urls.length > 0) {
-                t.urls.forEach(u => addUrlField(u));
-            } else {
-                addUrlField();
-            }
+            if (t.urls && t.urls.length > 0) t.urls.forEach(u => addUrlField(u)); else addUrlField();
         } else {
             document.getElementById('edit-index').value = "new";
             document.getElementById('edit-title').value = "";
@@ -194,51 +196,22 @@
     function saveTrip() {
         const title = document.getElementById('edit-title').value;
         if (!title) return;
-        
-        // Recoger todos los enlaces de los inputs
-        const urls = Array.from(document.querySelectorAll('.trip-url'))
-                          .map(input => input.value)
-                          .filter(val => val.trim() !== "");
-
-        const tripData = { 
-            title, 
-            provincia: document.getElementById('edit-provincia').value, 
-            km: document.getElementById('edit-km').value, 
-            img: currentBase64, 
-            urls: urls, 
-            notes: document.getElementById('edit-notes').value 
-        };
-
+        const urls = Array.from(document.querySelectorAll('.trip-url')).map(input => input.value).filter(val => val.trim() !== "");
+        const tripData = { title, provincia: document.getElementById('edit-provincia').value, km: document.getElementById('edit-km').value, img: currentBase64, urls: urls, notes: document.getElementById('edit-notes').value };
         const idx = document.getElementById('edit-index').value;
         if(idx === "new") trips.push(tripData); else trips[idx] = tripData;
-        
         saveAndRefresh();
         showList();
     }
 
-    function saveAndRefresh() {
-        localStorage.setItem('myTrips', JSON.stringify(trips));
-        renderTrips();
-    }
-
-    function showList() {
-        document.getElementById('detail-screen').classList.remove('active');
-        document.getElementById('list-screen').classList.add('active');
-    }
-
-    function handleFile(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => { currentBase64 = e.target.result; document.getElementById('preview-img').src = currentBase64; };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
+    function saveAndRefresh() { localStorage.setItem('myTrips', JSON.stringify(trips)); renderTrips(); }
+    function showList() { document.getElementById('detail-screen').classList.remove('active'); document.getElementById('list-screen').classList.add('active'); }
+    function handleFile(input) { if (input.files && input.files[0]) { const reader = new FileReader(); reader.onload = (e) => { currentBase64 = e.target.result; document.getElementById('preview-img').src = currentBase64; }; reader.readAsDataURL(input.files[0]); } }
     function deleteTrip(index) { if (confirm("¿Borrar?")) { trips.splice(index, 1); saveAndRefresh(); } }
     function moveTrip(index, dir) { const n = index + dir; if(n >= 0 && n < trips.length){ [trips[index], trips[n]] = [trips[n], trips[index]]; saveAndRefresh(); } }
     function exportJSON() { const b = new Blob([JSON.stringify(trips, null, 2)], {type: "application/json"}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = FILENAME; a.click(); }
     function importJSON(input) { const r = new FileReader(); r.onload = (e) => { try { trips = JSON.parse(e.target.result); saveAndRefresh(); } catch(i){ alert("Error"); } }; r.readAsText(input.files[0]); }
-    async function syncFromGitHub() { alert("Asegúrate de haber subido el JSON a GitHub con el nuevo formato de enlaces."); }
+    async function syncFromGitHub() { const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/mis-destinos/main/${FILENAME}`; try { const response = await fetch(rawUrl + '?nocache=' + new Date().getTime()); const data = await response.json(); if (confirm("¿Sincronizar?")) { trips = data; saveAndRefresh(); alert("✅ OK"); } } catch (err) { alert("Error"); } }
 
     renderTrips();
 </script>
