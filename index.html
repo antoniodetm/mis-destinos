@@ -18,10 +18,12 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer;
         }
 
-        /* Mapa con Carga Diferida */
+        /* Mapa Ajustado a 400px */
         .map-container {
-            width: 100%; height: 300px; border-radius: 20px; overflow: hidden;
-            margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            width: 100%; 
+            height: 400px; /* Tamaño solicitado */
+            border-radius: 20px; overflow: hidden;
+            margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
             background: #e5e3df; border: 2px solid white; position: relative;
         }
         .map-loading {
@@ -98,7 +100,6 @@
     let trips = JSON.parse(localStorage.getItem('myTrips')) || [];
     let currentBase64 = "";
 
-    // Lógica del Mapa
     window.addEventListener('load', () => {
         setTimeout(() => {
             const map = document.getElementById('main-map');
@@ -107,7 +108,6 @@
         }, 600);
     });
 
-    // --- SINCRONIZACIÓN GITHUB ---
     async function syncFromGitHub() {
         const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/mis-destinos/main/${FILENAME}`;
         try {
