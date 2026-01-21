@@ -20,16 +20,11 @@
             display: flex; align-items: center; justify-content: center; gap: 4px;
         }
 
-        /* Contenedor del Mapa MyMaps */
+        /* Mapa MyMaps */
         .map-container {
-            width: 100%;
-            height: 350px;
-            border-radius: 20px;
-            overflow: hidden;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            background: #e5e3df;
-            border: 2px solid white;
+            width: 100%; height: 350px; border-radius: 20px; overflow: hidden;
+            margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            background: #e5e3df; border: 2px solid white;
         }
         .map-container iframe { width: 100%; height: 100%; border: none; }
 
@@ -49,7 +44,7 @@
         .order-btn { background: none; border: none; font-size: 14px; color: #ccc; cursor: pointer; }
         .delete-quick { color: #ffbcbc; border: none; background: none; font-size: 14px; cursor: pointer; }
 
-        /* Pantalla Detalles (FOTO GRANDE) */
+        /* Pantalla Detalles - FOTO GRANDE */
         .header-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .btn { padding: 10px 20px; border-radius: 12px; border: none; font-weight: bold; }
         .btn-back { background: #eee; color: #666; }
@@ -58,11 +53,16 @@
         .profile-pic-container { text-align: center; margin-bottom: 25px; }
         #preview-img { width: 220px; height: 220px; border-radius: 35px; object-fit: cover; border: 6px solid white; box-shadow: 0 8px 25px rgba(0,0,0,0.15); cursor: pointer; background: #ddd; }
         
-        .row-inputs { display: flex; gap: 10px; }
-        .row-inputs > div { flex: 1; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: #7f8c8d; }
         input, textarea { width: 100%; margin-top: 5px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
         
+        /* Enlaces Web */
+        .url-group { display: flex; gap: 5px; margin-top: 8px; align-items: center; }
+        .btn-action { width: 40px; height: 40px; border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .btn-remove { background: var(--danger); }
+        .btn-add-inline { background: var(--success); }
+        .btn-go { background: var(--primary); }
+
         .add-btn-main { position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 35px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10; }
     </style>
 </head>
@@ -96,18 +96,15 @@
     </div>
     
     <label>Nombre del Destino</label>
-    <input type="text" id="edit-title" placeholder="Ej: Montserrat">
+    <input type="text" id="edit-title">
 
-    <div class="row-inputs">
-        <div>
-            <label>Provincia</label>
-            <input type="text" id="edit-provincia" placeholder="Barcelona">
-        </div>
-        <div>
-            <label>KM</label>
-            <input type="number" id="edit-km" placeholder="45">
-        </div>
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1;"><label>Provincia</label><input type="text" id="edit-provincia"></div>
+        <div style="flex:1;"><label>KM</label><input type="number" id="edit-km"></div>
     </div>
+    
+    <label>Enlaces Web</label>
+    <div id="urls-container"></div>
     
     <label>Notas</label>
     <textarea id="edit-notes" rows="4"></textarea>
@@ -116,7 +113,6 @@
 
 <script>
     const GITHUB_USER = "antoniodetm"; 
-    const GITHUB_REPO = "mis-destinos";
     const FILENAME = "mis-destinos.json";
 
     let trips = JSON.parse(localStorage.getItem('myTrips')) || [];
@@ -125,7 +121,7 @@
 
     function renderTrips() {
         const container = document.getElementById('trips-container');
-        container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray; margin-top:20px;">No hay destinos.</p>' : '';
+        container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray;">Sin destinos.</p>' : '';
         trips.forEach((trip, index) => {
             container.innerHTML += `
                 <div class="trip-card">
@@ -143,61 +139,91 @@
         });
     }
 
-    async function syncFromGitHub() {
-        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${FILENAME}`;
-        try {
-            const response = await fetch(rawUrl + '?nocache=' + new Date().getTime());
-            if (!response.ok) throw new Error("Archivo no encontrado.");
-            const data = await response.json();
-            if (confirm("¿Sincronizar desde GitHub?")) { trips = data; saveAndRefresh(); alert("✅ OK"); }
-        } catch (err) { alert("Error: " + err.message); }
+    // GESTIÓN DE ENLACES (MEJORADA)
+    function addUrlField(value = '') {
+        const container = document.getElementById('urls-container');
+        const div = document.createElement('div');
+        div.className = 'url-group';
+        div.innerHTML = `
+            <input type="url" class="trip-url" placeholder="https://..." value="${value}">
+            <button class="btn-action btn-go" onclick="goToUrl(this)">➜</button>
+            <button class="btn-action btn-remove" onclick="this.parentElement.remove()">✕</button>
+            <button class="btn-action btn-add-inline" onclick="addUrlField()">+</button>
+        `;
+        container.appendChild(div);
     }
 
-    function exportJSON() {
-        const blob = new Blob([JSON.stringify(trips, null, 2)], {type: "application/json"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = FILENAME; a.click();
-    }
-
-    function importJSON(input) {
-        const reader = new FileReader();
-        reader.onload = (e) => { try { trips = JSON.parse(e.target.result); saveAndRefresh(); } catch(err) { alert("Error."); } };
-        reader.readAsText(input.files[0]);
+    function goToUrl(btn) {
+        const url = btn.parentElement.querySelector('input').value;
+        if (url) window.open(url.startsWith('http') ? url : 'https://' + url, '_blank');
     }
 
     function openDetails(index) {
         document.getElementById('list-screen').classList.remove('active');
         document.getElementById('detail-screen').classList.add('active');
+        document.getElementById('urls-container').innerHTML = ''; // Limpiar siempre
+        
         if (index !== null) {
-            const trip = trips[index];
-            document.getElementById('edit-title').value = trip.title || "";
-            document.getElementById('edit-provincia').value = trip.provincia || "";
-            document.getElementById('edit-km').value = trip.km || "";
-            document.getElementById('edit-notes').value = trip.notes || "";
+            const t = trips[index];
+            document.getElementById('edit-title').value = t.title || "";
+            document.getElementById('edit-provincia').value = t.provincia || "";
+            document.getElementById('edit-km').value = t.km || "";
+            document.getElementById('edit-notes').value = t.notes || "";
+            document.getElementById('preview-img').src = t.img || placeholderImg;
+            currentBase64 = t.img || "";
             document.getElementById('edit-index').value = index;
-            document.getElementById('preview-img').src = trip.img || placeholderImg;
-            currentBase64 = trip.img || "";
+            
+            // Si el destino tiene enlaces, ponlos. Si no, pon uno vacío.
+            if (t.urls && t.urls.length > 0) {
+                t.urls.forEach(u => addUrlField(u));
+            } else {
+                addUrlField();
+            }
         } else {
-            document.getElementById('edit-title').value = ""; document.getElementById('edit-provincia').value = "";
-            document.getElementById('edit-km').value = ""; document.getElementById('edit-notes').value = "";
-            document.getElementById('edit-index').value = "new"; document.getElementById('preview-img').src = placeholderImg;
+            document.getElementById('edit-index').value = "new";
+            document.getElementById('edit-title').value = "";
+            document.getElementById('edit-provincia').value = "";
+            document.getElementById('edit-km').value = "";
+            document.getElementById('edit-notes').value = "";
+            document.getElementById('preview-img').src = placeholderImg;
             currentBase64 = "";
+            addUrlField();
         }
-        window.scrollTo(0,0);
     }
 
     function saveTrip() {
-        const title = document.getElementById('edit-title').value; if (!title) return;
-        const index = document.getElementById('edit-index').value;
-        const tripData = { title, provincia: document.getElementById('edit-provincia').value, km: document.getElementById('edit-km').value, img: currentBase64, notes: document.getElementById('edit-notes').value };
-        if (index === "new") trips.push(tripData); else trips[index] = tripData;
-        saveAndRefresh(); showList();
+        const title = document.getElementById('edit-title').value;
+        if (!title) return;
+        
+        // Recoger todos los enlaces de los inputs
+        const urls = Array.from(document.querySelectorAll('.trip-url'))
+                          .map(input => input.value)
+                          .filter(val => val.trim() !== "");
+
+        const tripData = { 
+            title, 
+            provincia: document.getElementById('edit-provincia').value, 
+            km: document.getElementById('edit-km').value, 
+            img: currentBase64, 
+            urls: urls, 
+            notes: document.getElementById('edit-notes').value 
+        };
+
+        const idx = document.getElementById('edit-index').value;
+        if(idx === "new") trips.push(tripData); else trips[idx] = tripData;
+        
+        saveAndRefresh();
+        showList();
     }
 
-    function deleteTrip(index) { if (confirm("¿Borrar?")) { trips.splice(index, 1); saveAndRefresh(); } }
+    function saveAndRefresh() {
+        localStorage.setItem('myTrips', JSON.stringify(trips));
+        renderTrips();
+    }
 
-    function moveTrip(index, direction) {
-        const newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < trips.length) { [trips[index], trips[newIndex]] = [trips[newIndex], trips[index]]; saveAndRefresh(); }
+    function showList() {
+        document.getElementById('detail-screen').classList.remove('active');
+        document.getElementById('list-screen').classList.add('active');
     }
 
     function handleFile(input) {
@@ -208,8 +234,11 @@
         }
     }
 
-    function saveAndRefresh() { localStorage.setItem('myTrips', JSON.stringify(trips)); renderTrips(); }
-    function showList() { document.getElementById('detail-screen').classList.remove('active'); document.getElementById('list-screen').classList.add('active'); }
+    function deleteTrip(index) { if (confirm("¿Borrar?")) { trips.splice(index, 1); saveAndRefresh(); } }
+    function moveTrip(index, dir) { const n = index + dir; if(n >= 0 && n < trips.length){ [trips[index], trips[n]] = [trips[n], trips[index]]; saveAndRefresh(); } }
+    function exportJSON() { const b = new Blob([JSON.stringify(trips, null, 2)], {type: "application/json"}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = FILENAME; a.click(); }
+    function importJSON(input) { const r = new FileReader(); r.onload = (e) => { try { trips = JSON.parse(e.target.result); saveAndRefresh(); } catch(i){ alert("Error"); } }; r.readAsText(input.files[0]); }
+    async function syncFromGitHub() { alert("Asegúrate de haber subido el JSON a GitHub con el nuevo formato de enlaces."); }
 
     renderTrips();
 </script>
