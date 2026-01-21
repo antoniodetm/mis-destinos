@@ -38,14 +38,23 @@
         .order-btn { background: none; border: none; font-size: 14px; color: #ccc; cursor: pointer; }
         .delete-quick { color: #ffbcbc; border: none; background: none; font-size: 14px; cursor: pointer; }
 
-        /* Pantalla Detalles */
-        .header-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        /* Pantalla Detalles (FOTO GRANDE) */
+        .header-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .btn { padding: 10px 20px; border-radius: 12px; border: none; font-weight: bold; }
         .btn-back { background: #eee; color: #666; }
         .btn-save { background: var(--primary); color: white; }
         
-        .profile-pic-container { text-align: center; margin-bottom: 20px; }
-        #preview-img { width: 120px; height: 120px; border-radius: 20px; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; background: #ddd; }
+        .profile-pic-container { text-align: center; margin-bottom: 25px; }
+        #preview-img { 
+            width: 200px; /* Tamaño aumentado */
+            height: 200px; /* Tamaño aumentado */
+            border-radius: 30px; 
+            object-fit: cover; 
+            border: 6px solid white; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12); 
+            cursor: pointer; 
+            background: #ddd; 
+        }
         
         .row-inputs { display: flex; gap: 10px; }
         .row-inputs > div { flex: 1; }
@@ -82,8 +91,10 @@
         <button class="btn btn-back" onclick="showList()">Volver</button>
         <button class="btn btn-save" onclick="saveTrip()">Guardar</button>
     </div>
+    
     <div class="profile-pic-container">
         <img id="preview-img" src="" onclick="document.getElementById('file-input').click()">
+        <p style="font-size: 0.7rem; color: #999; margin-top: 8px;">Pulsa la imagen para cambiarla</p>
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(this)">
     </div>
     
@@ -118,7 +129,7 @@
 
     let trips = JSON.parse(localStorage.getItem('myTrips')) || [];
     let currentBase64 = "";
-    const placeholderImg = "https://via.placeholder.com/150?text=Foto";
+    const placeholderImg = "https://via.placeholder.com/300?text=Añadir+Foto";
 
     function renderTrips() {
         const container = document.getElementById('trips-container');
@@ -130,7 +141,7 @@
                     <div class="card-info" onclick="openDetails(${index})">
                         <span class="card-title">${trip.title}</span>
                         <div class="card-meta">📍 ${trip.provincia || '---'} • 🚗 ${trip.km || '0'} km</div>
-                        <div class="card-subtitle">${trip.urls ? trip.urls.length : 0} enlaces cargados</div>
+                        <div class="card-subtitle">${trip.urls ? trip.urls.length : 0} enlaces</div>
                     </div>
                     <div class="card-controls">
                         <button class="order-btn" onclick="moveTrip(${index}, -1)">▲</button>
@@ -218,6 +229,7 @@
             currentBase64 = "";
             addUrlField();
         }
+        window.scrollTo(0,0);
     }
 
     function saveTrip() {
