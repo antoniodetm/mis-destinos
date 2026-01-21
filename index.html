@@ -23,15 +23,15 @@
         /* Contenedor del Mapa MyMaps */
         .map-container {
             width: 100%;
-            height: 300px;
+            height: 350px;
             border-radius: 20px;
             overflow: hidden;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            background: #eee;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            background: #e5e3df;
             border: 2px solid white;
         }
-        iframe { width: 100%; height: 100%; border: none; }
+        .map-container iframe { width: 100%; height: 100%; border: none; }
 
         /* Lista Principal */
         h1 { text-align: center; font-size: 1.5rem; margin: 10px 0 20px 0; font-weight: 800; }
@@ -63,12 +63,6 @@
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: #7f8c8d; }
         input, textarea { width: 100%; margin-top: 5px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
         
-        .url-group { display: flex; gap: 5px; margin-top: 8px; align-items: center; }
-        .btn-action { width: 40px; height: 40px; border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn-remove { background: var(--danger); }
-        .btn-add-inline { background: var(--success); }
-        .btn-go { background: var(--primary); }
-
         .add-btn-main { position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 35px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10; }
     </style>
 </head>
@@ -98,7 +92,6 @@
     </div>
     <div class="profile-pic-container">
         <img id="preview-img" src="" onclick="document.getElementById('file-input').click()">
-        <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">Pulsa para cambiar la imagen</p>
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(this)">
     </div>
     
@@ -111,22 +104,17 @@
             <input type="text" id="edit-provincia" placeholder="Barcelona">
         </div>
         <div>
-            <label>KM (desde casa)</label>
+            <label>KM</label>
             <input type="number" id="edit-km" placeholder="45">
         </div>
     </div>
     
-    <label>Enlaces Web</label>
-    <div id="urls-container"></div>
-    
-    <label>Notas / Itinerario</label>
+    <label>Notas</label>
     <textarea id="edit-notes" rows="4"></textarea>
-    
     <input type="hidden" id="edit-index">
 </div>
 
 <script>
-    // --- CONFIGURACIÓN FIJA ---
     const GITHUB_USER = "antoniodetm"; 
     const GITHUB_REPO = "mis-destinos";
     const FILENAME = "mis-destinos.json";
@@ -137,14 +125,14 @@
 
     function renderTrips() {
         const container = document.getElementById('trips-container');
-        container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray; margin-top:20px;">No hay destinos guardados.</p>' : '';
+        container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray; margin-top:20px;">No hay destinos.</p>' : '';
         trips.forEach((trip, index) => {
             container.innerHTML += `
                 <div class="trip-card">
                     <img src="${trip.img || placeholderImg}" class="thumb" onclick="openDetails(${index})">
                     <div class="card-info" onclick="openDetails(${index})">
                         <span class="card-title">${trip.title}</span>
-                        <div class="card-meta">📍 ${trip.provincia || 'Desconocido'} • 🚗 ${trip.km || '0'} km</div>
+                        <div class="card-meta">📍 ${trip.provincia || '---'} • 🚗 ${trip.km || '0'} km</div>
                     </div>
                     <div class="card-controls">
                         <button class="order-btn" onclick="moveTrip(${index}, -1)">▲</button>
@@ -159,58 +147,26 @@
         const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${FILENAME}`;
         try {
             const response = await fetch(rawUrl + '?nocache=' + new Date().getTime());
-            if (!response.ok) throw new Error("Archivo no encontrado en GitHub.");
+            if (!response.ok) throw new Error("Archivo no encontrado.");
             const data = await response.json();
-            if (confirm("¿Sobrescribir datos locales con los de GitHub?")) {
-                trips = data;
-                saveAndRefresh();
-                alert("✅ Sincronización completada.");
-            }
+            if (confirm("¿Sincronizar desde GitHub?")) { trips = data; saveAndRefresh(); alert("✅ OK"); }
         } catch (err) { alert("Error: " + err.message); }
     }
 
     function exportJSON() {
         const blob = new Blob([JSON.stringify(trips, null, 2)], {type: "application/json"});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = FILENAME;
-        a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = FILENAME; a.click();
     }
 
     function importJSON(input) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                trips = JSON.parse(e.target.result);
-                saveAndRefresh();
-                alert("Importado con éxito.");
-            } catch(err) { alert("Error al leer el archivo."); }
-        };
+        reader.onload = (e) => { try { trips = JSON.parse(e.target.result); saveAndRefresh(); } catch(err) { alert("Error."); } };
         reader.readAsText(input.files[0]);
-    }
-
-    function addUrlField(value = '') {
-        const container = document.getElementById('urls-container');
-        const div = document.createElement('div');
-        div.className = 'url-group';
-        div.innerHTML = `
-            <input type="url" class="trip-url" placeholder="https://..." value="${value}">
-            <button class="btn-action btn-go" onclick="goToUrl(this)">➜</button>
-            <button class="btn-action btn-remove" onclick="this.parentElement.remove()">✕</button>
-            <button class="btn-action btn-add-inline" onclick="addUrlField()">+</button>
-        `;
-        container.appendChild(div);
-    }
-
-    function goToUrl(btn) {
-        const url = btn.parentElement.querySelector('input').value;
-        if (url) window.open(url.startsWith('http') ? url : 'https://' + url, '_blank');
     }
 
     function openDetails(index) {
         document.getElementById('list-screen').classList.remove('active');
         document.getElementById('detail-screen').classList.add('active');
-        document.getElementById('urls-container').innerHTML = '';
         if (index !== null) {
             const trip = trips[index];
             document.getElementById('edit-title').value = trip.title || "";
@@ -220,78 +176,42 @@
             document.getElementById('edit-index').value = index;
             document.getElementById('preview-img').src = trip.img || placeholderImg;
             currentBase64 = trip.img || "";
-            if (trip.urls && trip.urls.length > 0) trip.urls.forEach(url => addUrlField(url));
-            else addUrlField();
         } else {
-            document.getElementById('edit-title').value = "";
-            document.getElementById('edit-provincia').value = "";
-            document.getElementById('edit-km').value = "";
-            document.getElementById('edit-notes').value = "";
-            document.getElementById('edit-index').value = "new";
-            document.getElementById('preview-img').src = placeholderImg;
+            document.getElementById('edit-title').value = ""; document.getElementById('edit-provincia').value = "";
+            document.getElementById('edit-km').value = ""; document.getElementById('edit-notes').value = "";
+            document.getElementById('edit-index').value = "new"; document.getElementById('preview-img').src = placeholderImg;
             currentBase64 = "";
-            addUrlField();
         }
         window.scrollTo(0,0);
     }
 
     function saveTrip() {
-        const title = document.getElementById('edit-title').value;
-        if (!title) return;
+        const title = document.getElementById('edit-title').value; if (!title) return;
         const index = document.getElementById('edit-index').value;
-        const urls = Array.from(document.querySelectorAll('.trip-url')).map(i => i.value).filter(v => v);
-        
-        const tripData = { 
-            title, 
-            provincia: document.getElementById('edit-provincia').value,
-            km: document.getElementById('edit-km').value,
-            img: currentBase64, 
-            urls, 
-            notes: document.getElementById('edit-notes').value 
-        };
-
-        if (index === "new") trips.push(tripData);
-        else trips[index] = tripData;
-        
-        saveAndRefresh();
-        showList();
+        const tripData = { title, provincia: document.getElementById('edit-provincia').value, km: document.getElementById('edit-km').value, img: currentBase64, notes: document.getElementById('edit-notes').value };
+        if (index === "new") trips.push(tripData); else trips[index] = tripData;
+        saveAndRefresh(); showList();
     }
 
-    function deleteTrip(index) {
-        if (confirm("¿Eliminar este destino?")) { trips.splice(index, 1); saveAndRefresh(); }
-    }
+    function deleteTrip(index) { if (confirm("¿Borrar?")) { trips.splice(index, 1); saveAndRefresh(); } }
 
     function moveTrip(index, direction) {
         const newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < trips.length) {
-            [trips[index], trips[newIndex]] = [trips[newIndex], trips[index]];
-            saveAndRefresh();
-        }
+        if (newIndex >= 0 && newIndex < trips.length) { [trips[index], trips[newIndex]] = [trips[newIndex], trips[index]]; saveAndRefresh(); }
     }
 
     function handleFile(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                currentBase64 = e.target.result;
-                document.getElementById('preview-img').src = currentBase64;
-            };
+            reader.onload = (e) => { currentBase64 = e.target.result; document.getElementById('preview-img').src = currentBase64; };
             reader.readAsDataURL(input.files[0]);
         }
     }
 
-    function saveAndRefresh() {
-        localStorage.setItem('myTrips', JSON.stringify(trips));
-        renderTrips();
-    }
-
-    function showList() {
-        document.getElementById('detail-screen').classList.remove('active');
-        document.getElementById('list-screen').classList.add('active');
-    }
+    function saveAndRefresh() { localStorage.setItem('myTrips', JSON.stringify(trips)); renderTrips(); }
+    function showList() { document.getElementById('detail-screen').classList.remove('active'); document.getElementById('list-screen').classList.add('active'); }
 
     renderTrips();
 </script>
-
 </body>
 </html>
