@@ -12,17 +12,29 @@
         .active { display: block; }
 
         /* Barra Superior */
-        .top-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+        .top-bar { display: flex; gap: 8px; margin-bottom: 15px; }
         .btn-top { 
             flex: 1; padding: 12px 2px; border-radius: 12px; border: none; 
             background: white; color: var(--dark); font-size: 11px; font-weight: bold;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer;
             display: flex; align-items: center; justify-content: center; gap: 4px;
         }
-        .btn-top:active { background: #f0f0f0; }
+
+        /* Contenedor del Mapa MyMaps */
+        .map-container {
+            width: 100%;
+            height: 300px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #eee;
+            border: 2px solid white;
+        }
+        iframe { width: 100%; height: 100%; border: none; }
 
         /* Lista Principal */
-        h1 { text-align: center; font-size: 1.5rem; margin: 5px 0 20px 0; font-weight: 800; }
+        h1 { text-align: center; font-size: 1.5rem; margin: 10px 0 20px 0; font-weight: 800; }
         .trip-card {
             background: white; padding: 12px; margin-bottom: 15px; border-radius: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center;
@@ -32,7 +44,6 @@
         .card-info { flex-grow: 1; cursor: pointer; }
         .card-title { font-weight: bold; font-size: 1.1rem; color: #333; display: block; }
         .card-meta { font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-top: 2px; }
-        .card-subtitle { font-size: 0.8rem; color: #95a5a6; margin-top: 2px; }
 
         .card-controls { display: flex; flex-direction: column; gap: 4px; margin-left: 10px; border-left: 1px solid #eee; padding-left: 10px; }
         .order-btn { background: none; border: none; font-size: 14px; color: #ccc; cursor: pointer; }
@@ -45,25 +56,15 @@
         .btn-save { background: var(--primary); color: white; }
         
         .profile-pic-container { text-align: center; margin-bottom: 25px; }
-        #preview-img { 
-            width: 200px; /* Tamaño aumentado */
-            height: 200px; /* Tamaño aumentado */
-            border-radius: 30px; 
-            object-fit: cover; 
-            border: 6px solid white; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12); 
-            cursor: pointer; 
-            background: #ddd; 
-        }
+        #preview-img { width: 220px; height: 220px; border-radius: 35px; object-fit: cover; border: 6px solid white; box-shadow: 0 8px 25px rgba(0,0,0,0.15); cursor: pointer; background: #ddd; }
         
         .row-inputs { display: flex; gap: 10px; }
         .row-inputs > div { flex: 1; }
-
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: #7f8c8d; }
         input, textarea { width: 100%; margin-top: 5px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
         
         .url-group { display: flex; gap: 5px; margin-top: 8px; align-items: center; }
-        .btn-action { width: 40px; height: 40px; margin-top: 5px; border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-action { width: 40px; height: 40px; border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .btn-remove { background: var(--danger); }
         .btn-add-inline { background: var(--success); }
         .btn-go { background: var(--primary); }
@@ -81,6 +82,10 @@
         <input type="file" id="import-input" style="display:none" accept=".json" onchange="importJSON(this)">
     </div>
 
+    <div class="map-container">
+        <iframe src="https://www.google.com/maps/d/u/0/embed?mid=1FATKt49yvCmEUAieYpCZsyYnyydIr9U&ehbc=2E312F"></iframe>
+    </div>
+
     <h1>🌍 Mis Destinos</h1>
     <div id="trips-container"></div>
     <button class="add-btn-main" onclick="openDetails(null)">+</button>
@@ -91,10 +96,9 @@
         <button class="btn btn-back" onclick="showList()">Volver</button>
         <button class="btn btn-save" onclick="saveTrip()">Guardar</button>
     </div>
-    
     <div class="profile-pic-container">
         <img id="preview-img" src="" onclick="document.getElementById('file-input').click()">
-        <p style="font-size: 0.7rem; color: #999; margin-top: 8px;">Pulsa la imagen para cambiarla</p>
+        <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">Pulsa para cambiar la imagen</p>
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(this)">
     </div>
     
@@ -104,18 +108,18 @@
     <div class="row-inputs">
         <div>
             <label>Provincia</label>
-            <input type="text" id="edit-provincia" placeholder="Ej: Barcelona">
+            <input type="text" id="edit-provincia" placeholder="Barcelona">
         </div>
         <div>
-            <label>Kilómetros</label>
-            <input type="number" id="edit-km" placeholder="Ej: 45">
+            <label>KM (desde casa)</label>
+            <input type="number" id="edit-km" placeholder="45">
         </div>
     </div>
     
     <label>Enlaces Web</label>
     <div id="urls-container"></div>
     
-    <label>Notas</label>
+    <label>Notas / Itinerario</label>
     <textarea id="edit-notes" rows="4"></textarea>
     
     <input type="hidden" id="edit-index">
@@ -129,19 +133,18 @@
 
     let trips = JSON.parse(localStorage.getItem('myTrips')) || [];
     let currentBase64 = "";
-    const placeholderImg = "https://via.placeholder.com/300?text=Añadir+Foto";
+    const placeholderImg = "https://via.placeholder.com/400?text=Añadir+Foto";
 
     function renderTrips() {
         const container = document.getElementById('trips-container');
-        container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray; margin-top:50px;">Lista vacía.</p>' : '';
+        container.innerHTML = trips.length === 0 ? '<p style="text-align:center; color:gray; margin-top:20px;">No hay destinos guardados.</p>' : '';
         trips.forEach((trip, index) => {
             container.innerHTML += `
                 <div class="trip-card">
                     <img src="${trip.img || placeholderImg}" class="thumb" onclick="openDetails(${index})">
                     <div class="card-info" onclick="openDetails(${index})">
                         <span class="card-title">${trip.title}</span>
-                        <div class="card-meta">📍 ${trip.provincia || '---'} • 🚗 ${trip.km || '0'} km</div>
-                        <div class="card-subtitle">${trip.urls ? trip.urls.length : 0} enlaces</div>
+                        <div class="card-meta">📍 ${trip.provincia || 'Desconocido'} • 🚗 ${trip.km || '0'} km</div>
                     </div>
                     <div class="card-controls">
                         <button class="order-btn" onclick="moveTrip(${index}, -1)">▲</button>
@@ -156,12 +159,12 @@
         const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${FILENAME}`;
         try {
             const response = await fetch(rawUrl + '?nocache=' + new Date().getTime());
-            if (!response.ok) throw new Error("No se halló el archivo en GitHub.");
+            if (!response.ok) throw new Error("Archivo no encontrado en GitHub.");
             const data = await response.json();
-            if (confirm("¿Sincronizar desde GitHub?")) {
+            if (confirm("¿Sobrescribir datos locales con los de GitHub?")) {
                 trips = data;
                 saveAndRefresh();
-                alert("✅ Sincronizado.");
+                alert("✅ Sincronización completada.");
             }
         } catch (err) { alert("Error: " + err.message); }
     }
@@ -180,8 +183,8 @@
             try {
                 trips = JSON.parse(e.target.result);
                 saveAndRefresh();
-                alert("Importado correctamente.");
-            } catch(err) { alert("Error en el archivo."); }
+                alert("Importado con éxito.");
+            } catch(err) { alert("Error al leer el archivo."); }
         };
         reader.readAsText(input.files[0]);
     }
@@ -255,7 +258,7 @@
     }
 
     function deleteTrip(index) {
-        if (confirm("¿Borrar?")) { trips.splice(index, 1); saveAndRefresh(); }
+        if (confirm("¿Eliminar este destino?")) { trips.splice(index, 1); saveAndRefresh(); }
     }
 
     function moveTrip(index, direction) {
