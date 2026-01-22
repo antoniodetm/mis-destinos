@@ -18,11 +18,9 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer;
         }
 
-        /* Mapa Ajustado a 400px */
+        /* Mapa Principal de la lista */
         .map-container {
-            width: 100%; 
-            height: 400px; /* Tamaño solicitado */
-            border-radius: 20px; overflow: hidden;
+            width: 100%; height: 400px; border-radius: 20px; overflow: hidden;
             margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
             background: #e5e3df; border: 2px solid white; position: relative;
         }
@@ -33,7 +31,19 @@
         }
         .map-container iframe { width: 100%; height: 100%; border: none; position: relative; z-index: 2; }
 
-        /* Lista */
+        /* Mapa en Detalle - AHORA MÁS ALTO (450px) */
+        .detail-map-preview { 
+            width: 100%; 
+            height: 450px; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            margin: 15px 0; 
+            background: #eee; 
+            border: 1px solid #ddd; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .detail-map-preview iframe { width: 100% !important; height: 100% !important; border: none; }
+
         h1 { text-align: center; font-size: 1.5rem; margin: 10px 0 20px 0; font-weight: 800; }
         .trip-card {
             background: white; padding: 12px; margin-bottom: 15px; border-radius: 20px;
@@ -44,7 +54,6 @@
         .card-title { font-weight: bold; font-size: 1.1rem; }
         .card-meta { font-size: 0.85rem; color: var(--primary); font-weight: 600; }
 
-        /* Detalles */
         #preview-img { width: 220px; height: 220px; border-radius: 35px; object-fit: cover; border: 6px solid white; box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: #ddd; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.75rem; color: #7f8c8d; text-transform: uppercase; }
         input, textarea { width: 100%; margin-top: 5px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
@@ -80,17 +89,28 @@
         <button onclick="showList()">Volver</button>
         <button onclick="saveTrip()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:10px;">Guardar</button>
     </div>
+
+    <div id="map-display" class="detail-map-preview"></div>
+
     <div style="text-align:center;">
         <img id="preview-img" src="" onclick="document.getElementById('file-input').click()">
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(this)">
     </div>
+    
     <label>Destino</label><input type="text" id="edit-title">
+    
     <div style="display:flex; gap:10px;">
         <div style="flex:1;"><label>Provincia</label><input type="text" id="edit-provincia"></div>
         <div style="flex:1;"><label>KM</label><input type="number" id="edit-km"></div>
     </div>
+
     <label>Enlaces Web</label><div id="urls-container"></div>
+    
     <label>Notas</label><textarea id="edit-notes" rows="4"></textarea>
+
+    <label>Código del Mapa (Pegar iframe)</label>
+    <textarea id="edit-map-code" rows="2" placeholder='Pega aquí: <iframe src="..." ...></iframe>' oninput="updateMapPreview(this.value)"></textarea>
+
     <input type="hidden" id="edit-index">
 </div>
 
@@ -140,36 +160,43 @@
         });
     }
 
-    function addUrlField(v = '') {
-        const c = document.getElementById('urls-container');
-        const d = document.createElement('div');
-        d.className = 'url-group';
-        d.innerHTML = `<input type="url" class="trip-url" value="${v}" style="flex:1"><button class="btn-action" style="background:var(--primary)" onclick="window.open(this.previousSibling.value.startsWith('http') ? this.previousSibling.value : 'https://' + this.previousSibling.value)">➜</button><button class="btn-action" style="background:var(--danger)" onclick="this.parentElement.remove()">✕</button><button class="btn-action" style="background:var(--success)" onclick="addUrlField()">+</button>`;
-        c.appendChild(d);
+    function updateMapPreview(code) {
+        const display = document.getElementById('map-display');
+        if (code && code.includes('<iframe')) {
+            display.innerHTML = code;
+            display.style.display = 'block';
+        } else {
+            display.innerHTML = '<p style="text-align:center; color:#999; padding-top:200px; font-size:12px;">Vista previa del mapa</p>';
+        }
     }
 
     function openDetails(idx) {
         document.getElementById('list-screen').classList.remove('active');
         document.getElementById('detail-screen').classList.add('active');
         document.getElementById('urls-container').innerHTML = '';
+        
         if(idx !== null) {
             const t = trips[idx];
             document.getElementById('edit-title').value = t.title || "";
             document.getElementById('edit-provincia').value = t.provincia || "";
             document.getElementById('edit-km').value = t.km || "";
+            document.getElementById('edit-map-code').value = t.mapCode || "";
             document.getElementById('edit-notes').value = t.notes || "";
             document.getElementById('preview-img').src = t.img || "";
             currentBase64 = t.img || "";
             document.getElementById('edit-index').value = idx;
+            updateMapPreview(t.mapCode || "");
             if(t.urls && t.urls.length) t.urls.forEach(u => addUrlField(u)); else addUrlField();
         } else {
             document.getElementById('edit-index').value = "new";
             document.getElementById('edit-title').value = "";
             document.getElementById('edit-provincia').value = "";
             document.getElementById('edit-km').value = "";
+            document.getElementById('edit-map-code').value = "";
             document.getElementById('edit-notes').value = "";
             document.getElementById('preview-img').src = "";
             currentBase64 = "";
+            updateMapPreview("");
             addUrlField();
         }
     }
@@ -178,11 +205,27 @@
         const title = document.getElementById('edit-title').value;
         if (!title) return;
         const u = Array.from(document.querySelectorAll('.trip-url')).map(i => i.value).filter(v => v.trim() !== "");
-        const data = { title, provincia: document.getElementById('edit-provincia').value, km: document.getElementById('edit-km').value, img: currentBase64, urls: u, notes: document.getElementById('edit-notes').value };
+        const data = { 
+            title, 
+            provincia: document.getElementById('edit-provincia').value, 
+            km: document.getElementById('edit-km').value, 
+            img: currentBase64, 
+            urls: u, 
+            notes: document.getElementById('edit-notes').value,
+            mapCode: document.getElementById('edit-map-code').value 
+        };
         const idx = document.getElementById('edit-index').value;
         if(idx === "new") trips.push(data); else trips[idx] = data;
         saveAndRefresh();
         showList();
+    }
+
+    function addUrlField(v = '') {
+        const c = document.getElementById('urls-container');
+        const d = document.createElement('div');
+        d.className = 'url-group';
+        d.innerHTML = `<input type="url" class="trip-url" value="${v}" style="flex:1"><button class="btn-action" style="background:var(--primary)" onclick="window.open(this.previousSibling.value.startsWith('http') ? this.previousSibling.value : 'https://' + this.previousSibling.value)">➜</button><button class="btn-action" style="background:var(--danger)" onclick="this.parentElement.remove()">✕</button><button class="btn-action" style="background:var(--success)" onclick="addUrlField()">+</button>`;
+        c.appendChild(d);
     }
 
     function deleteTrip(i) { if(confirm("¿Borrar?")) { trips.splice(i,1); saveAndRefresh(); } }
